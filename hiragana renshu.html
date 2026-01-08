@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Optimized viewport for mobile app feel -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- iOS / PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Hiragana">
+    <meta name="theme-color" content="#4f46e5">
+
+    <title>Japanese Learning App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #f5f5f4;
+            -webkit-tap-highlight-color: transparent; /* Remove tap highlight */
+            /* Safe area for iPhone X+ */
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .hiragana-font {
+            font-family: 'Klee One', cursive;
+        }
+        .app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background-color: #ffffff;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .stroke-anim {
+            transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+            touch-action: manipulation;
+        }
+        .stroke-anim:active {
+            transform: scale(0.96);
+        }
+        /* Grid for the start menu */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        /* Highlight style for target characters */
+        .target-char {
+            color: #4f46e5; /* indigo-600 */
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+        
+        /* Modal Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        .animate-slide-up {
+            animation: slideUp 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased select-none">
+
+<div class="app-container flex flex-col relative overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white p-6 pt-safe-top rounded-b-3xl shadow-lg z-20 sticky top-0 transition-all duration-300" id="main-header" style="padding-top: max(1.5rem, env(safe-area-inset-top));">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center">
+                <button id="back-btn" class="hidden mr-4 text-white hover:bg-white/20 rounded-full w-10 h-10 flex items-center justify-center transition-colors active:scale-90">
+                    <i class="fa-solid fa-arrow-left text-lg"></i>
+                </button>
+                <div>
+                    <p class="text-indigo-200 text-xs font-bold uppercase tracking-wider">Japanese Basics</p>
+                    <h1 class="text-2xl font-bold mt-1" id="header-title">Hiragana Menu</h1>
+                </div>
+            </div>
+            <div class="bg-white/20 p-2 rounded-full w-10 h-10 flex items-center justify-center backdrop-blur-sm">
+                <i class="fa-solid fa-earth-asia"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content Area -->
+    <main class="flex-grow p-4 pb-32 overflow-y-auto overscroll-y-contain" id="main-content">
+        
+        <!-- Start Menu (Initially Visible) -->
+        <div id="start-menu" class="space-y-6 animate-fade-in">
+            <div class="bg-indigo-50 border-l-4 border-indigo-400 p-4 rounded-r-lg shadow-sm">
+                <p class="text-sm text-indigo-800 font-bold">
+                    Select a row to practice!
+                </p>
+            </div>
+
+            <!-- Random Button Container -->
+            <div id="random-container"></div>
+            
+            <div class="menu-grid" id="menu-grid">
+                <!-- Menu items injected by JS -->
+            </div>
+        </div>
+
+        <!-- Learning View (Initially Hidden) -->
+        <div id="learning-view" class="hidden space-y-8 animate-slide-up">
+            <!-- Characters List -->
+            <section class="space-y-4">
+                <h2 class="text-xl font-bold text-slate-700 border-b-2 border-slate-200 pb-2 mb-4">Character Practice</h2>
+                <div id="card-container" class="space-y-4"></div>
+            </section>
+
+            <!-- Word Practice -->
+            <section class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <h2 class="text-xl font-bold text-slate-700 mb-4">Let's Read Words!</h2>
+                <div class="grid grid-cols-2 gap-3" id="word-container"></div>
+            </section>
+
+            <!-- Quiz Section -->
+            <section class="pt-4">
+                <div class="bg-indigo-900 text-white rounded-2xl p-6 relative overflow-hidden transition-all duration-500 shadow-xl" id="quiz-wrapper">
+                    <div class="absolute -right-6 -top-6 text-indigo-800 text-9xl opacity-20 transform rotate-12">
+                        <i class="fa-solid fa-question"></i>
+                    </div>
+                    
+                    <div class="relative z-10">
+                        <h2 class="text-xl font-bold mb-1" id="quiz-title">Mini Quiz</h2>
+                        <p class="text-indigo-200 text-sm mb-6" id="quiz-subtitle">Which is the correct reading?</p>
+                        
+                        <!-- Quiz Content Container -->
+                        <div id="quiz-content">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white/90 backdrop-blur-md border-t border-slate-200 p-4 text-center text-xs text-slate-400 absolute bottom-0 w-full z-10" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));">
+        <p>Let's practice a little every day!</p>
+    </footer>
+
+    <!-- Stroke Order Modal -->
+    <div id="stroke-modal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 relative animate-slide-up shadow-2xl">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-2xl z-20 w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
+                <i class="fa-solid fa-times"></i>
+            </button>
+            
+            <h3 class="text-center font-bold text-xl mb-4 text-indigo-600">Stroke Order Guide</h3>
+            
+            <!-- Visualization Container -->
+            <div class="flex justify-center mb-4 relative bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
+                 <div class="absolute inset-0 z-0">
+                     <div class="w-full h-1/2 border-b border-dashed border-slate-200"></div>
+                     <div class="absolute top-0 left-1/2 h-full border-r border-dashed border-slate-200"></div>
+                 </div>
+
+                 <div style="width: 240px; height: 240px; position: relative;">
+                     <div id="modal-char-display" class="hiragana-font absolute inset-0 flex items-center justify-center text-slate-800" style="font-size: 180px; line-height: 1; z-index: 1;"></div>
+                     <svg id="svg-overlay" class="absolute inset-0 w-full h-full" style="z-index: 10; pointer-events: none;" viewBox="0 0 100 100">
+                         <defs>
+                             <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                                 <path d="M0,0 L6,3 L0,6" fill="#ef4444" />
+                             </marker>
+                         </defs>
+                         <!-- Guides injected here -->
+                     </svg>
+                 </div>
+            </div>
+
+            <div class="text-center">
+                <p id="modal-char-romaji" class="text-2xl font-bold mb-2 text-slate-700"></p>
+                <p class="text-xs text-slate-500">Follow the numbers and red arrows</p>
+            </div>
+            
+            <button onclick="closeModal()" class="w-full mt-4 bg-indigo-100 text-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-200 transition-colors">
+                Close
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- Data: 50 Sounds ---
+    const hiraganaData = {
+        "a-row": {
+            title: "A-Row (A - O)",
+            color: "bg-red-500",
+            lightColor: "bg-red-50",
+            chars: [
+                { char: 'あ', romaji: 'a', sound: 'Ah', mnemonic: '<b>A</b>ntenna on a roof', guides: [{n:1,d:'M22 32 L42 32',x:18,y:32},{n:2,d:'M50 18 L50 38',x:50,y:10},{n:3,d:'M58 45 L45 55',x:63,y:42}] },
+                { char: 'い', romaji: 'i', sound: 'Ee', mnemonic: 'Two <b>E</b>els', guides: [{n:1,d:'M25 22 L25 42',x:25,y:15},{n:2,d:'M70 28 L70 45',x:70,y:20}] },
+                { char: 'う', romaji: 'u', sound: 'Oo', mnemonic: '<b>U</b>-turn', guides: [{n:1,d:'M42 12 L55 16',x:35,y:12},{n:2,d:'M30 42 L50 42',x:25,y:38}] },
+                { char: 'え', romaji: 'e', sound: 'Eh', mnemonic: '<b>E</b>xotic bird', guides: [{n:1,d:'M45 10 L55 13',x:40,y:8},{n:2,d:'M28 38 L48 38',x:20,y:38}] },
+                { char: 'お', romaji: 'o', sound: 'Oh', mnemonic: '<b>O</b>n the green', guides: [{n:1,d:'M28 32 L48 32',x:20,y:32},{n:2,d:'M50 15 L50 35',x:50,y:8},{n:3,d:'M78 25 L85 32',x:75,y:20}] }
+            ],
+            words: [
+                { jp: 'あさ', speech: '朝', romaji: 'asa', en: 'Morning', emoji: '☀️' },
+                { jp: 'いえ', speech: '家', romaji: 'ie', en: 'House', emoji: '🏠' },
+                { jp: 'うえ', speech: '上', romaji: 'ue', en: 'Up', emoji: '⬆️' },
+                { jp: 'えき', speech: '駅', romaji: 'eki', en: 'Station', emoji: '🚉' },
+                { jp: 'あお', speech: '青', romaji: 'ao', en: 'Blue', emoji: '🔵' }
+            ]
+        },
+        "ka-row": {
+            title: "Ka-Row (Ka - Ko)",
+            color: "bg-orange-500",
+            lightColor: "bg-orange-50",
+            chars: [
+                { char: 'か', romaji: 'ka', sound: 'Ka', mnemonic: '<b>Ca</b>r passing a cliff', guides: [{n:1,d:'M25 35 L45 35',x:20,y:35},{n:2,d:'M55 15 L55 35',x:55,y:10},{n:3,d:'M75 25 L85 35',x:75,y:20}] },
+                { char: 'き', romaji: 'ki', sound: 'Ki', mnemonic: '<b>Key</b>', guides: [{n:1,d:'M25 25 L55 22',x:20,y:25},{n:2,d:'M25 38 L55 35',x:20,y:38},{n:3,d:'M60 15 L50 35',x:60,y:10},{n:4,d:'M30 65 L50 75',x:25,y:65}] },
+                { char: 'く', romaji: 'ku', sound: 'Ku', mnemonic: '<b>Cu</b>ckoo bird beak', guides: [{n:1,d:'M50 20 L30 50',x:50,y:15}] },
+                { char: 'け', romaji: 'ke', sound: 'Ke', mnemonic: '<b>Ke</b>g of beer', guides: [{n:1,d:'M25 25 L25 55',x:25,y:20},{n:2,d:'M45 30 L75 30',x:40,y:30},{n:3,d:'M65 15 L65 45',x:65,y:10}] },
+                { char: 'こ', romaji: 'ko', sound: 'Ko', mnemonic: '<b>Co</b>-habitation (two worms)', guides: [{n:1,d:'M30 25 L60 25',x:25,y:25},{n:2,d:'M30 70 L60 70',x:25,y:70}] }
+            ],
+            words: [
+                { jp: 'かさ', speech: '傘', romaji: 'kasa', en: 'Umbrella', emoji: '☂️' },
+                { jp: 'き', speech: 'き', romaji: 'ki', en: 'Tree', emoji: '🌳' }, 
+                { jp: 'くち', speech: '口', romaji: 'kuchi', en: 'Mouth', emoji: '👄' },
+                { jp: 'いけ', speech: '池', romaji: 'ike', en: 'Pond', emoji: '🏞️' },
+                { jp: 'ここ', speech: 'ここ', romaji: 'koko', en: 'Here', emoji: '👇' }
+            ]
+        },
+        "sa-row": {
+            title: "Sa-Row (Sa - So)",
+            color: "bg-yellow-500",
+            lightColor: "bg-yellow-50",
+            chars: [
+                { char: 'さ', romaji: 'sa', sound: 'Sa', mnemonic: '<b>Sa</b>murai sword', guides: [{n:1,d:'M25 35 L55 32',x:20,y:35},{n:2,d:'M55 15 L45 45',x:60,y:10},{n:3,d:'M35 65 L55 75',x:30,y:65}] },
+                { char: 'し', romaji: 'shi', sound: 'Shi', mnemonic: '<b>She</b> has long hair / Hook', guides: [{n:1,d:'M40 15 L40 55',x:40,y:10}] },
+                { char: 'す', romaji: 'su', sound: 'Su', mnemonic: '<b>Sw</b>ing', guides: [{n:1,d:'M20 30 L60 30',x:15,y:30},{n:2,d:'M50 10 L50 40',x:50,y:5}] },
+                { char: 'せ', romaji: 'se', sound: 'Se', mnemonic: '<b>Se</b>tting sun', guides: [{n:1,d:'M25 35 L65 32',x:20,y:35},{n:2,d:'M70 15 L70 45',x:70,y:10},{n:3,d:'M50 20 L50 40 L70 40',x:50,y:20}] },
+                { char: 'そ', romaji: 'so', sound: 'So', mnemonic: '<b>Se</b>wing stitch (Zigzag)', guides: [{n:1,d:'M30 20 L50 20',x:25,y:20}] }
+            ],
+            words: [
+                { jp: 'さかな', speech: 'さかな', romaji: 'sakana', en: 'Fish', emoji: '🐟' }, 
+                { jp: 'あし', speech: '足', romaji: 'ashi', en: 'Leg / Foot', emoji: '🦶' },
+                { jp: 'すし', speech: '寿司', romaji: 'sushi', en: 'Sushi', emoji: '🍣' },
+                { jp: 'せんせい', speech: '先生', romaji: 'sensei', en: 'Teacher', emoji: '👨‍🏫' },
+                { jp: 'そと', speech: '外', romaji: 'soto', en: 'Outside', emoji: '🏞️' }
+            ]
+        },
+        "ta-row": {
+            title: "Ta-Row (Ta - To)",
+            color: "bg-green-500",
+            lightColor: "bg-green-50",
+            chars: [
+                { char: 'た', romaji: 'ta', sound: 'Ta', mnemonic: '<b>Ta</b>CO', guides: [{n:1,d:'M20 30 L50 28',x:15,y:30},{n:2,d:'M30 15 L25 45',x:30,y:10},{n:3,d:'M55 45 L75 45',x:50,y:45},{n:4,d:'M60 65 L80 65',x:55,y:65}] },
+                { char: 'ち', romaji: 'chi', sound: 'Chi', mnemonic: '<b>Chee</b>rleader', guides: [{n:1,d:'M20 25 L60 25',x:15,y:25},{n:2,d:'M50 15 L40 45',x:50,y:10}] },
+                { char: 'つ', romaji: 'tsu', sound: 'Tsu', mnemonic: '<b>Tsu</b>nami wave', guides: [{n:1,d:'M25 35 L55 35',x:20,y:35}] },
+                { char: 'て', romaji: 'te', sound: 'Te', mnemonic: '<b>Te</b>nnis racket (broken)', guides: [{n:1,d:'M20 40 L50 40',x:15,y:40}] },
+                { char: 'と', romaji: 'to', sound: 'To', mnemonic: '<b>To</b>e with a nail', guides: [{n:1,d:'M40 20 L55 35',x:40,y:15},{n:2,d:'M65 15 L40 40',x:70,y:15}] }
+            ],
+            words: [
+                { jp: 'たまご', speech: 'たまご', romaji: 'tamago', en: 'Egg', emoji: '🥚' },
+                { jp: 'ちち', speech: '父', romaji: 'chichi', en: 'Father', emoji: '👨' },
+                { jp: 'つくえ', speech: 'つくえ', romaji: 'tsukue', en: 'Desk', emoji: '<svg class="inline-block" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor"><path d="M2 7h20v3H2z M5 10v11h3V10zm11 0v11h3V10z M9 11h6v2H9z"/></svg>' },
+                { jp: 'て', speech: 'て', romaji: 'te', en: 'Hand', emoji: '✋' }, 
+                { jp: 'とけい', speech: '時計', romaji: 'tokei', en: 'Clock', emoji: '⏰' }
+            ]
+        },
+        "na-row": {
+            title: "Na-Row (Na - No)",
+            color: "bg-teal-500",
+            lightColor: "bg-teal-50",
+            chars: [
+                { char: 'な', romaji: 'na', sound: 'Na', mnemonic: '<b>Na</b>n (bread) & Knot', guides: [{n:1,d:'M20 30 L50 30',x:15,y:30},{n:2,d:'M40 10 L35 45',x:40,y:5},{n:3,d:'M65 20 L75 25',x:60,y:20},{n:4,d:'M60 45 L60 65',x:60,y:40}] },
+                { char: 'に', romaji: 'ni', sound: 'Ni', mnemonic: '<b>Knee</b>', guides: [{n:1,d:'M25 20 L25 60',x:25,y:15},{n:2,d:'M50 35 L75 35',x:45,y:35},{n:3,d:'M50 60 L75 60',x:45,y:60}] },
+                { char: 'ぬ', romaji: 'nu', sound: 'Nu', mnemonic: '<b>Noo</b>dles', guides: [{n:1,d:'M35 15 L25 55',x:40,y:10},{n:2,d:'M20 30 L50 25',x:15,y:30}] },
+                { char: 'ね', romaji: 'ne', sound: 'Ne', mnemonic: '<b>Ne</b>t / <b>Ne</b>llie the cat', guides: [{n:1,d:'M25 20 L25 60',x:25,y:15},{n:2,d:'M20 30 L50 25',x:15,y:30}] },
+                { char: 'の', romaji: 'no', sound: 'No', mnemonic: '<b>No</b> smoking sign', guides: [{n:1,d:'M50 25 L40 45',x:55,y:20}] }
+            ],
+            words: [
+                { jp: 'なまえ', speech: '名前', romaji: 'namae', en: 'Name', emoji: '📛' },
+                { jp: 'にく', speech: '肉', romaji: 'niku', en: 'Meat', emoji: '🍖' },
+                { jp: 'いぬ', speech: '犬', romaji: 'inu', en: 'Dog', emoji: '🐕' },
+                { jp: 'ねこ', speech: '猫', romaji: 'neko', en: 'Cat', emoji: '🐈' },
+                { jp: 'きのう', speech: '昨日', romaji: 'kinou', en: 'Yesterday', emoji: '📅' }
+            ]
+        },
+        "ha-row": {
+            title: "Ha-Row (Ha - Ho)",
+            color: "bg-cyan-500",
+            lightColor: "bg-cyan-50",
+            chars: [
+                { char: 'は', romaji: 'ha', sound: 'Ha', mnemonic: '<b>Ha</b>-ha (laughing)', guides: [{n:1,d:'M25 20 L25 60',x:25,y:15},{n:2,d:'M45 35 L75 35',x:40,y:35},{n:3,d:'M60 25 L60 55',x:60,y:20}] },
+                { char: 'ひ', romaji: 'hi', sound: 'Hi', mnemonic: '<b>He</b> has a big smile', guides: [{n:1,d:'M25 35 L30 35',x:20,y:35}] },
+                { char: 'ふ', romaji: 'fu', sound: 'Fu', mnemonic: '<b>Fu</b>ji mountain', guides: [{n:1,d:'M50 10 Q60 12 55 25',x:50,y:10},{n:2,d:'M45 30 Q35 45 45 55',x:40,y:30},{n:3,d:'M25 40 Q20 50 30 55',x:25,y:35},{n:4,d:'M70 40 Q75 50 65 55',x:70,y:35}] },
+                { char: 'へ', romaji: 'he', sound: 'He', mnemonic: '<b>He</b>aven (pointing up)', guides: [{n:1,d:'M20 60 L50 30',x:15,y:60}] },
+                { char: 'ほ', romaji: 'ho', sound: 'Ho', mnemonic: '<b>Ho</b>t hockey', guides: [{n:1,d:'M25 20 L25 60',x:25,y:15},{n:2,d:'M45 30 L75 30',x:40,y:30},{n:3,d:'M45 50 L75 50',x:40,y:50},{n:4,d:'M60 32 L60 55',x:60,y:20}] }
+            ],
+            words: [
+                { jp: 'はな', speech: '花', romaji: 'hana', en: 'Flower', emoji: '🌸' },
+                { jp: 'ひ', speech: 'ひ', romaji: 'hi', en: 'Fire', emoji: '🔥' },
+                { jp: 'ふく', speech: '服', romaji: 'fuku', en: 'Clothes', emoji: '👕' },
+                { jp: 'へや', speech: '部屋', romaji: 'heya', en: 'Room', emoji: '🛋️' },
+                { jp: 'ほし', speech: '星', romaji: 'hoshi', en: 'Star', emoji: '⭐' }
+            ]
+        },
+        "ma-row": {
+            title: "Ma-Row (Ma - Mo)",
+            color: "bg-purple-500",
+            lightColor: "bg-purple-50",
+            chars: [
+                { char: 'ま', romaji: 'ma', sound: 'Ma', mnemonic: '<b>Ma</b>st of a ship', guides: [{n:1,d:'M25 30 L75 30',x:20,y:30},{n:2,d:'M25 45 L75 45',x:20,y:45},{n:3,d:'M50 15 L50 65',x:50,y:10}] },
+                { char: 'み', romaji: 'mi', sound: 'Mi', mnemonic: '<b>Me</b> (Who is 21?)', guides: [{n:1,d:'M25 25 L50 25',x:20,y:25},{n:2,d:'M60 20 L60 55',x:60,y:15}] },
+                { char: 'む', romaji: 'mu', sound: 'Mu', mnemonic: '<b>Mo</b>o cow', guides: [{n:1,d:'M30 35 L70 35',x:25,y:35},{n:2,d:'M50 15 L50 55',x:50,y:10},{n:3,d:'M75 25 L85 35',x:75,y:20}] },
+                { char: 'め', romaji: 'me', sound: 'Me', mnemonic: '<b>Me</b>ssy Noodle (No loop)', guides: [{n:1,d:'M35 15 L25 55',x:40,y:10},{n:2,d:'M20 30 L50 25',x:15,y:30}] },
+                { char: 'も', romaji: 'mo', sound: 'Mo', mnemonic: '<b>Mo</b>re fish hooks', guides: [{n:1,d:'M45 15 L45 55 Q45 65 60 60',x:45,y:10},{n:2,d:'M25 30 L65 30',x:20,y:30},{n:3,d:'M25 45 L65 45',x:20,y:45}] }
+            ],
+            words: [
+                { jp: 'まち', speech: '町', romaji: 'machi', en: 'Town', emoji: '🏘️' },
+                { jp: 'みせ', speech: '店', romaji: 'mise', en: 'Shop', emoji: '🏪' },
+                { jp: 'むら', speech: '村', romaji: 'mura', en: 'Village', emoji: '🏡' },
+                { jp: 'め', speech: 'め', romaji: 'me', en: 'Eye', emoji: '👁️' }, 
+                { jp: 'くも', speech: 'くも', romaji: 'kumo', en: 'Cloud', emoji: '☁️' }
+            ]
+        },
+        "ya-row": {
+            title: "Ya-Row (Ya - Yo)",
+            color: "bg-pink-500",
+            lightColor: "bg-pink-50",
+            chars: [
+                { char: 'や', romaji: 'ya', sound: 'Ya', mnemonic: '<b>Ya</b>k', guides: [{n:1,d:'M20 35 L50 30',x:15,y:35},{n:2,d:'M55 20 L55 35',x:55,y:15},{n:3,d:'M75 15 L60 60',x:75,y:10}] },
+                { char: 'ゆ', romaji: 'yu', sound: 'Yu', mnemonic: '<b>U</b>-turn but fishy', guides: [{n:1,d:'M25 35 L50 30',x:20,y:35},{n:2,d:'M60 15 L60 65',x:60,y:10}] },
+                { char: 'よ', romaji: 'yo', sound: 'Yo', mnemonic: '<b>Yo</b>-yo', guides: [{n:1,d:'M45 20 L70 20',x:40,y:20},{n:2,d:'M55 10 L55 55',x:55,y:5}] }
+            ],
+            words: [
+                { jp: 'やま', speech: '山', romaji: 'yama', en: 'Mountain', emoji: '⛰️' },
+                { jp: 'ゆき', speech: '雪', romaji: 'yuki', en: 'Snow', emoji: '❄️' },
+                { jp: 'よる', speech: '夜', romaji: 'yoru', en: 'Night', emoji: '🌙' }
+            ]
+        },
+        "ra-row": {
+            title: "Ra-Row (Ra - Ro)",
+            color: "bg-rose-500",
+            lightColor: "bg-rose-50",
+            chars: [
+                { char: 'ら', romaji: 'ra', sound: 'Ra', mnemonic: '<b>Ra</b>bbit', guides: [{n:1,d:'M45 15 L55 18',x:40,y:15},{n:2,d:'M35 35 L35 55',x:30,y:35}] },
+                { char: 'り', romaji: 'ri', sound: 'Ri', mnemonic: '<b>Ri</b>ver / Reed', guides: [{n:1,d:'M30 20 L30 50',x:30,y:15},{n:2,d:'M65 20 L65 60',x:65,y:15}] },
+                { char: 'る', romaji: 'ru', sound: 'Ru', mnemonic: '<b>Ru</b>by (Loop at end)', guides: [{n:1,d:'M25 30 L65 30',x:20,y:30}] },
+                { char: 'れ', romaji: 're', sound: 'Re', mnemonic: '<b>Re</b>sting guy', guides: [{n:1,d:'M25 20 L25 60',x:25,y:15},{n:2,d:'M20 30 L50 25',x:15,y:30}] },
+                { char: 'ろ', romaji: 'ro', sound: 'Ro', mnemonic: '<b>Ro</b>ad (No loop)', guides: [{n:1,d:'M25 30 L65 30',x:20,y:30}] }
+            ],
+            words: [
+                { jp: 'さくら', speech: 'さくら', romaji: 'sakura', en: 'Cherry Blossom', emoji: '🌸' },
+                { jp: 'りんご', speech: 'リンゴ', romaji: 'ringo', en: 'Apple', emoji: '🍎' },
+                { jp: 'くるま', speech: '車', romaji: 'kuruma', en: 'Car', emoji: '🚗' },
+                { jp: 'これ', speech: 'これ', romaji: 'kore', en: 'This', emoji: '👇' },
+                { jp: 'しろ', speech: 'しろ', romaji: 'shiro', en: 'White', emoji: '⬜' }
+            ]
+        },
+        "wa-row": {
+            title: "Wa-Row (Wa, Wo, N)",
+            color: "bg-slate-600",
+            lightColor: "bg-slate-200",
+            chars: [
+                { char: 'わ', romaji: 'wa', sound: 'Wa', mnemonic: '<b>Wa</b>sp (Round belly)', guides: [{n:1,d:'M25 20 L25 60',x:25,y:15},{n:2,d:'M20 30 L50 25',x:15,y:30}] },
+                { char: 'を', romaji: 'wo', sound: 'Woh', mnemonic: '<b>O</b>lympic athlete', guides: [{n:1,d:'M25 30 L65 30',x:20,y:30},{n:2,d:'M50 15 L40 50',x:50,y:10},{n:3,d:'M75 40 Q85 50 45 75',x:75,y:40}] },
+                { char: 'ん', romaji: 'n', sound: 'N', mnemonic: '<b>n</b> (End letter)', guides: [{n:1,d:'M25 25 L20 65',x:25,y:20}] }
+            ],
+            words: [
+                { jp: 'わたし', speech: 'わたし', romaji: 'watashi', en: 'I / Me', emoji: '🙋' },
+                { jp: 'みず を のむ', speech: 'みずをのむ', romaji: 'mizu o nomu', en: 'Drink water', emoji: '🚰' },
+                { jp: 'ほん', speech: '本', romaji: 'hon', en: 'Book', emoji: '📚' }
+            ]
+        }
+    };
+
+    let currentColumnKey = null;
+
+    // --- TTS Logic ---
+    let jpVoice = null;
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        // Try to find a Japanese voice, preferring Google's if available
+        jpVoice = voices.find(voice => voice.name.includes('Google') && voice.lang.includes('ja')) 
+               || voices.find(voice => voice.lang.includes('ja')) 
+               || null;
+    }
+    if ('speechSynthesis' in window) {
+        loadVoices();
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+    function speak(text) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ja-JP';
+            utterance.rate = 0.9;
+            if (jpVoice) utterance.voice = jpVoice;
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    // --- Helper: Highlight Char ---
+    function highlightChar(word, charsInRow) {
+        const charSet = new Set(charsInRow.map(c => c.char));
+        let result = '';
+        for (let char of word) {
+            if (charSet.has(char)) {
+                result += `<span class="target-char">${char}</span>`;
+            } else {
+                result += char;
+            }
+        }
+        return result;
+    }
+
+    // --- Render Menu ---
+    function renderMenu() {
+        const grid = document.getElementById('menu-grid');
+        grid.innerHTML = '';
+        
+        // Add Random Button
+        const randomContainer = document.getElementById('random-container');
+        randomContainer.innerHTML = `
+            <button onclick="loadRandom()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-xl shadow-md hover:shadow-lg hover:scale-[1.01] transition-all flex items-center justify-center space-x-4 mb-2 touch-manipulation active:scale-[0.98]">
+                <div class="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-shuffle"></i>
+                </div>
+                <div class="text-left">
+                    <div class="text-lg font-bold">Random Practice</div>
+                    <div class="text-xs text-indigo-100 uppercase tracking-wider">Mix of 10 characters</div>
+                </div>
+            </button>
+        `;
+
+        Object.keys(hiraganaData).forEach(key => {
+            const group = hiraganaData[key];
+            const btn = document.createElement('button');
+            btn.className = `${group.color} text-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all flex flex-col items-center justify-center min-h-[100px] touch-manipulation active:scale-[0.98]`;
+            btn.innerHTML = `
+                <span class="text-2xl font-bold mb-1">${group.chars[0].char}</span>
+                <span class="text-xs uppercase tracking-wider opacity-90">${group.title}</span>
+            `;
+            btn.onclick = () => loadColumn(key);
+            grid.appendChild(btn);
+        });
+    }
+
+    // --- Render Learning View (Shared Logic) ---
+    function renderLearningView(data, isRandomMode = false) {
+        // UI Transitions
+        document.getElementById('start-menu').classList.add('hidden');
+        document.getElementById('learning-view').classList.remove('hidden');
+        document.getElementById('back-btn').classList.remove('hidden');
+        
+        // Header Update
+        const header = document.getElementById('main-header');
+        header.className = `${data.color} text-white p-6 rounded-b-3xl shadow-lg z-20 sticky top-0 transition-all duration-300 pt-safe-top`;
+        document.getElementById('header-title').textContent = data.title;
+
+        // Render Characters
+        const cardContainer = document.getElementById('card-container');
+        cardContainer.innerHTML = '';
+        data.chars.forEach(c => {
+            const card = document.createElement('div');
+            card.className = "bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex items-start space-x-4 stroke-anim";
+            card.innerHTML = `
+                <div class="${data.lightColor} text-slate-800 w-20 h-20 rounded-lg flex items-center justify-center flex-shrink-0 cursor-pointer shadow-inner relative active:scale-95 transition-transform" onclick="speak('${c.char}')">
+                    <span class="hiragana-font text-5xl font-bold">${c.char}</span>
+                    <i class="fa-solid fa-volume-high absolute bottom-1 right-1 text-xs opacity-50"></i>
+                </div>
+                <div class="flex-grow">
+                    <div class="flex justify-between items-center mb-1">
+                        <h3 class="text-2xl font-bold text-slate-800">${c.romaji}</h3>
+                        <span class="text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded-full">Like: "${c.sound}"</span>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-snug mb-3">
+                        <i class="fa-solid fa-lightbulb mr-1 opacity-70"></i> ${c.mnemonic}
+                    </p>
+                    <div class="flex space-x-3">
+                        <button onclick="speak('${c.char}')" class="text-xs bg-indigo-50 text-indigo-600 px-3 py-2 rounded-lg font-bold hover:bg-indigo-100 flex items-center transition-colors touch-manipulation active:bg-indigo-200">
+                            <i class="fa-solid fa-play mr-1"></i> Listen
+                        </button>
+                        <button onclick="openModal('${c.char}')" class="text-xs bg-slate-100 text-slate-600 px-3 py-2 rounded-lg font-bold hover:bg-slate-200 flex items-center transition-colors touch-manipulation active:bg-slate-300">
+                            <i class="fa-solid fa-pen mr-1"></i> Guide
+                        </button>
+                    </div>
+                </div>
+            `;
+            cardContainer.appendChild(card);
+        });
+
+        // Render Words
+        const wordContainer = document.getElementById('word-container');
+        wordContainer.innerHTML = '';
+        data.words.forEach(w => {
+            const wordEl = document.createElement('button');
+            wordEl.className = "bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center text-center stroke-anim active:bg-slate-50 touch-manipulation";
+            wordEl.onclick = () => speak(w.speech || w.jp);
+            const displayJp = highlightChar(w.jp, data.chars);
+            
+            wordEl.innerHTML = `
+                <span class="text-2xl mb-1">${w.emoji}</span>
+                <span class="hiragana-font text-2xl text-slate-800">${displayJp}</span>
+                <span class="text-xs text-slate-400 font-mono">${w.romaji}</span>
+                <span class="text-xs font-bold text-indigo-600 mt-1">${w.en}</span>
+            `;
+            wordContainer.appendChild(wordEl);
+        });
+
+        // Initialize Quiz based on Mode
+        initQuiz(data.chars, isRandomMode ? 'challenge' : 'infinite');
+    }
+
+    // --- Load Column ---
+    function loadColumn(key) {
+        currentColumnKey = key;
+        renderLearningView(hiraganaData[key], false);
+    }
+
+    // --- Load Random ---
+    function loadRandom() {
+        currentColumnKey = 'random';
+        
+        let allChars = [];
+        let allWords = [];
+        Object.values(hiraganaData).forEach(group => {
+            allChars = allChars.concat(group.chars);
+            allWords = allWords.concat(group.words);
+        });
+
+        const shuffledChars = allChars.sort(() => 0.5 - Math.random()).slice(0, 10);
+        const randomWords = allWords.sort(() => 0.5 - Math.random()).slice(0, 6);
+
+        const randomData = {
+            title: "Random Practice",
+            color: "bg-gradient-to-r from-indigo-500 to-purple-500",
+            lightColor: "bg-indigo-50",
+            chars: shuffledChars,
+            words: randomWords
+        };
+        
+        renderLearningView(randomData, true);
+    }
+
+    // --- Back Button ---
+    document.getElementById('back-btn').onclick = () => {
+        document.getElementById('learning-view').classList.add('hidden');
+        document.getElementById('start-menu').classList.remove('hidden');
+        document.getElementById('back-btn').classList.add('hidden');
+        
+        // Reset Header
+        const header = document.getElementById('main-header');
+        header.className = "bg-indigo-600 text-white p-6 rounded-b-3xl shadow-lg z-20 sticky top-0 transition-all duration-300 pt-safe-top";
+        document.getElementById('header-title').textContent = "Hiragana Menu";
+        currentColumnKey = null;
+    };
+
+    // --- NEW Quiz System ---
+    let quizState = {
+        mode: 'infinite', // 'infinite' or 'challenge'
+        questions: [],
+        queue: [], // For infinite, it is unused. For challenge, it holds the order.
+        currentIndex: 0,
+        score: 0
+    };
+
+    function initQuiz(chars, mode) {
+        quizState.mode = mode;
+        quizState.questions = chars; // Pool of chars
+        quizState.score = 0;
+        quizState.currentIndex = 0;
+
+        const quizContent = document.getElementById('quiz-content');
+        const title = document.getElementById('quiz-title');
+        const subtitle = document.getElementById('quiz-subtitle');
+        const wrapper = document.getElementById('quiz-wrapper');
+
+        // Reset Styles
+        wrapper.className = "bg-indigo-900 text-white rounded-2xl p-6 relative overflow-hidden transition-all duration-500 shadow-xl";
+
+        if (mode === 'challenge') {
+            title.textContent = "Challenge Quiz";
+            subtitle.textContent = `Test your knowledge of these ${chars.length} characters!`;
+            
+            // Set up queue for challenge
+            quizState.queue = [...chars].sort(() => Math.random() - 0.5);
+            
+            quizContent.innerHTML = `
+                <div class="text-center py-6">
+                    <div class="bg-indigo-800/50 rounded-full w-20 h-20 mx-auto flex items-center justify-center mb-4 text-3xl animate-pulse">
+                        <i class="fa-solid fa-flag-checkered"></i>
+                    </div>
+                    <button onclick="startChallenge()" class="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] mb-2 touch-manipulation">
+                        Start 10-Question Quiz
+                    </button>
+                    <p class="text-xs text-indigo-300">Score points for correct answers!</p>
+                </div>
+            `;
+        } else {
+            title.textContent = "Mini Quiz";
+            subtitle.textContent = "Which is the correct reading?";
+            renderInfiniteQuestion();
+        }
+    }
+
+    function startChallenge() {
+        quizState.currentIndex = 0;
+        quizState.score = 0;
+        renderChallengeQuestion();
+    }
+
+    function renderChallengeQuestion() {
+        const target = quizState.queue[quizState.currentIndex];
+        const progress = `${quizState.currentIndex + 1} / ${quizState.queue.length}`;
+        document.getElementById('quiz-subtitle').textContent = `Question ${progress}`;
+
+        renderQuizLayout(target, (isCorrect) => {
+            if (isCorrect) quizState.score++;
+            
+            // Wait a bit then show next or result
+            setTimeout(() => {
+                quizState.currentIndex++;
+                if (quizState.currentIndex < quizState.queue.length) {
+                    renderChallengeQuestion();
+                } else {
+                    showQuizResult();
+                }
+            }, 1000);
+        });
+    }
+
+    function renderInfiniteQuestion() {
+        const chars = quizState.questions;
+        const target = chars[Math.floor(Math.random() * chars.length)];
+        
+        renderQuizLayout(target, (isCorrect) => {
+            // Wait then show new question
+            setTimeout(() => {
+                renderInfiniteQuestion();
+            }, 1000);
+        });
+    }
+
+    function renderQuizLayout(target, onComplete) {
+        // Generate options
+        let options = [target];
+        const pool = quizState.questions.length >= 4 ? quizState.questions : Object.values(hiraganaData).flatMap(g => g.chars);
+        
+        while (options.length < 3) {
+            const r = pool[Math.floor(Math.random() * pool.length)];
+            if (!options.some(o => o.char === r.char)) options.push(r);
+        }
+        options.sort(() => Math.random() - 0.5);
+
+        const quizContent = document.getElementById('quiz-content');
+        
+        quizContent.innerHTML = `
+            <div id="question-area" class="text-center mb-6">
+                <span class="hiragana-font text-6xl font-bold animate-bounce-in block">${target.char}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mb-2" id="current-options">
+                ${options.map(opt => `
+                    <button onclick="handleAnswer('${opt.romaji}', '${target.romaji}', this)" 
+                        class="bg-white/10 hover:bg-white/20 active:bg-white/30 text-white border border-indigo-400/30 py-4 rounded-lg text-xl font-bold transition-all touch-manipulation">
+                        ${opt.romaji}
+                    </button>
+                `).join('')}
+            </div>
+            <div id="current-feedback" class="h-8 text-center font-bold"></div>
+        `;
+
+        // Attach global handler for this closure
+        window.handleAnswer = (selected, correct, btnElement) => {
+            const isCorrect = selected === correct;
+            const feedback = document.getElementById('current-feedback');
+            const buttons = document.getElementById('current-options').children;
+            
+            Array.from(buttons).forEach(b => b.disabled = true);
+
+            if (isCorrect) {
+                btnElement.className = "bg-green-500 text-white py-4 rounded-lg text-xl font-bold border border-green-400 scale-105 transform shadow-lg";
+                feedback.innerHTML = '<span class="text-green-300"><i class="fa-solid fa-check-circle"></i> Correct!</span>';
+                speak('正解');
+                setTimeout(() => speak(target.char), 400);
+            } else {
+                btnElement.className = "bg-red-500 text-white py-4 rounded-lg text-xl font-bold border border-red-400 opacity-50";
+                // Highlight correct one
+                Array.from(buttons).forEach(b => {
+                    if(b.textContent.trim() === correct) {
+                        b.className = "bg-green-500/50 text-white py-4 rounded-lg text-xl font-bold border border-green-400";
+                    }
+                });
+                feedback.innerHTML = `<span class="text-red-300">Incorrect... it's ${correct}</span>`;
+                speak('ちがいます');
+            }
+            
+            onComplete(isCorrect);
+        };
+    }
+
+    function showQuizResult() {
+        const score = quizState.score;
+        const total = quizState.queue.length;
+        const percentage = (score / total) * 100;
+        let msg = percentage === 100 ? "Perfect!" : percentage >= 70 ? "Great Job!" : "Keep Practicing!";
+        let icon = percentage === 100 ? "fa-trophy" : percentage >= 70 ? "fa-thumbs-up" : "fa-book-open";
+
+        document.getElementById('quiz-title').textContent = "Quiz Results";
+        document.getElementById('quiz-subtitle').textContent = "Challenge Complete!";
+
+        const quizContent = document.getElementById('quiz-content');
+        quizContent.innerHTML = `
+            <div class="text-center py-6 animate-fade-in">
+                <div class="text-6xl mb-4 text-yellow-300">
+                    <i class="fa-solid ${icon}"></i>
+                </div>
+                <div class="text-4xl font-bold mb-2">${score} / ${total}</div>
+                <p class="text-indigo-200 text-lg mb-6">${msg}</p>
+                <button onclick="startChallenge()" class="bg-white text-indigo-900 hover:bg-indigo-50 active:bg-indigo-100 font-bold py-3 px-8 rounded-full shadow-md transition-colors touch-manipulation">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> Try Again
+                </button>
+            </div>
+        `;
+    }
+
+    // --- Modal Logic ---
+    function openModal(char) {
+        let charData;
+        
+        if (currentColumnKey === 'random') {
+            // Search in all data if in random mode
+            for (const key in hiraganaData) {
+                const found = hiraganaData[key].chars.find(c => c.char === char);
+                if (found) {
+                    charData = found;
+                    break;
+                }
+            }
+        } else {
+            const data = hiraganaData[currentColumnKey];
+            charData = data.chars.find(c => c.char === char);
+        }
+
+        if (!charData) return;
+
+        const modal = document.getElementById('stroke-modal');
+        const charDisplay = document.getElementById('modal-char-display');
+        const svg = document.getElementById('svg-overlay');
+        const guideContent = document.getElementById('modal-char-romaji');
+
+        charDisplay.textContent = charData.char;
+        guideContent.textContent = `${charData.char} (${charData.romaji})`;
+
+        const defs = svg.querySelector('defs').outerHTML;
+        svg.innerHTML = defs;
+
+        charData.guides.forEach(g => {
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("d", g.d);
+            path.setAttribute("stroke", "#ef4444");
+            path.setAttribute("stroke-width", "2");
+            path.setAttribute("fill", "none");
+            path.setAttribute("marker-end", "url(#arrowhead)");
+            path.setAttribute("stroke-dasharray", "4,2");
+            svg.appendChild(path);
+
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute("cx", g.x);
+            circle.setAttribute("cy", g.y);
+            circle.setAttribute("r", "5");
+            circle.setAttribute("fill", "#ef4444");
+            svg.appendChild(circle);
+
+            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            text.setAttribute("x", g.x);
+            text.setAttribute("y", g.y);
+            text.setAttribute("dy", "1.5");
+            text.setAttribute("text-anchor", "middle");
+            text.setAttribute("alignment-baseline", "middle");
+            text.setAttribute("fill", "white");
+            text.setAttribute("font-size", "7");
+            text.setAttribute("font-weight", "bold");
+            text.textContent = g.n;
+            svg.appendChild(text);
+        });
+        
+        modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('stroke-modal').classList.add('hidden');
+    }
+
+    renderMenu();
+
+</script>
+</body>
+</html>
