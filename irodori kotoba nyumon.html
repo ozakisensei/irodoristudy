@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>いろどり 日本語単語クイズ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #f0f9ff;
+        }
+        .romaji-font {
+            font-family: 'Roboto', sans-serif;
+        }
+        .emoji-img {
+            font-size: 4rem;
+            line-height: 1;
+        }
+        @media (min-width: 768px) {
+            .emoji-img {
+                font-size: 5rem;
+            }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .btn-answer:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border-color: #38bdf8;
+        }
+        .btn-answer:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .btn-play {
+            transition: all 0.2s;
+        }
+        .btn-play:hover {
+            transform: scale(1.1);
+            background-color: #0ea5e9;
+            color: white;
+        }
+        .btn-play:active {
+            transform: scale(0.9);
+        }
+
+        .correct-anim {
+            background-color: #dcfce7 !important;
+            border-color: #22c55e !important;
+            color: #14532d !important;
+        }
+        .wrong-anim {
+            background-color: #fee2e2 !important;
+            border-color: #ef4444 !important;
+            color: #7f1d1d !important;
+        }
+        
+        /* アクセント表示 */
+        .mora {
+            display: inline-block;
+            position: relative;
+            padding-top: 6px;
+        }
+        .pitch-high {
+            border-top: 3px solid #ef4444; /* 赤線 */
+            color: #ef4444;
+        }
+        .pitch-drop::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 2px;
+            height: 10px; /* 下がり目の縦線 */
+            background-color: #ef4444;
+        }
+        .pitch-low {
+            color: #64748b;
+        }
+        
+        /* スクロールバーのカスタマイズ */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden min-h-[600px] flex flex-col relative">
+        
+        <!-- Header -->
+        <header class="bg-sky-500 p-4 text-white text-center flex items-center justify-between relative shadow-md z-10">
+            <div class="w-8"></div>
+            <div>
+                <h1 class="text-xl font-bold">いろどり ことばテスト</h1>
+                <p class="text-xs opacity-90">Irodori Vocabulary Quiz</p>
+            </div>
+            <!-- Settings Button -->
+            <button onclick="quizApp.openSettings()" class="text-white hover:bg-sky-600 p-2 rounded-full transition-colors" title="音声設定">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.077-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.396-1.622a15.995 15.995 0 00-3.396-1.622m0 0a15.998 15.998 0 00-3.388 1.622m3.388 1.622a15.994 15.994 0 01-1.622 3.395m0 0a15.998 15.998 0 003.388 1.62m5.713-7.208a3 3 0 11-5.709-1.085 2.25 2.25 0 01-2.438-2.25 4.5 4.5 0 018.106-2.088c.06.324.09.658.09.998 0 .44-.044.87-.128 1.288zM15 15.75a3 3 0 11-6 0 3 3 0 016 0zm6.367-8.4a3 3 0 11-5.63-1.643 2.25 2.25 0 01-2.28-2.357 4.5 4.5 0 018.426 1.62c0 .878-.204 1.706-.557 2.453l-.007.016a1.65 1.65 0 00.048 1.91z" />
+                </svg>
+            </button>
+        </header>
+
+        <main id="app-content" class="flex-1 p-4 md:p-8 flex flex-col items-center justify-center w-full relative z-0">
+            <!-- Dynamic content -->
+        </main>
+
+        <footer class="bg-slate-50 p-2 text-center text-xs text-slate-400">
+            Based on Irodori Starter Wordlist
+        </footer>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="absolute inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4 fade-in">
+            <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">音声設定 (Voice Settings)</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-600 mb-1">声の種類 (Voice)</label>
+                        <select id="voice-select" class="w-full border rounded-lg p-2 text-sm bg-slate-50">
+                            <option>読み込み中...</option>
+                        </select>
+                        <p class="text-xs text-slate-400 mt-1">※GoogleやMicrosoftの音声を選ぶと自然になる場合があります。</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-600 mb-1">速さ (Speed): <span id="rate-val">0.8</span></label>
+                        <input type="range" id="rate-range" min="0.5" max="1.5" step="0.1" value="0.8" class="w-full accent-sky-500">
+                    </div>
+
+                    <button onclick="quizApp.testSpeech()" class="w-full py-2 border border-sky-500 text-sky-500 rounded-lg text-sm font-bold hover:bg-sky-50">
+                        🔊 テスト再生 (Test)
+                    </button>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button onclick="quizApp.closeSettings()" class="bg-slate-800 text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-700">
+                        閉じる (Close)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. Menu -->
+    <template id="tmpl-menu">
+        <div class="w-full space-y-4 fade-in max-w-lg mx-auto h-full flex flex-col">
+            <h2 class="text-center text-lg font-bold text-slate-700 mb-4 flex-shrink-0">練習する課を選んでください<br><span class="text-sm font-normal text-slate-500">Select a lesson to practice</span></h2>
+            
+            <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                <!-- Comprehensive Review Section -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold text-slate-500 mb-2 px-1">まとめてテスト (Comprehensive Test)</h3>
+                    <div class="grid grid-cols-1 gap-3">
+                        <button onclick="quizApp.startQuiz('review-1-6')" class="p-4 rounded-xl border-2 border-violet-100 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-all text-left flex items-center group shadow-sm">
+                            <span class="bg-violet-500 text-white rounded-full w-10 h-10 flex-shrink-0 flex items-center justify-center mr-4 font-bold text-sm shadow-md group-hover:scale-110 transition-transform">1-6</span>
+                            <div>
+                                <div class="font-bold text-slate-700">第1課 〜 第6課</div>
+                                <div class="text-xs text-slate-500">あいさつ、自己紹介、食べ物など</div>
+                            </div>
+                        </button>
+                        <button onclick="quizApp.startQuiz('review-7-12')" class="p-4 rounded-xl border-2 border-violet-100 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-all text-left flex items-center group shadow-sm">
+                            <span class="bg-violet-500 text-white rounded-full w-10 h-10 flex-shrink-0 flex items-center justify-center mr-4 font-bold text-sm shadow-md group-hover:scale-110 transition-transform">7-12</span>
+                            <div>
+                                <div class="font-bold text-slate-700">第7課 〜 第12課</div>
+                                <div class="text-xs text-slate-500">家、仕事、時間、趣味など</div>
+                            </div>
+                        </button>
+                        <button onclick="quizApp.startQuiz('review-13-18')" class="p-4 rounded-xl border-2 border-violet-100 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-all text-left flex items-center group shadow-sm">
+                            <span class="bg-violet-500 text-white rounded-full w-10 h-10 flex-shrink-0 flex items-center justify-center mr-4 font-bold text-sm shadow-md group-hover:scale-110 transition-transform">13-18</span>
+                            <div>
+                                <div class="font-bold text-slate-700">第13課 〜 第18課</div>
+                                <div class="text-xs text-slate-500">移動、買い物、休日など</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Individual Lessons Section -->
+                <div>
+                    <h3 class="text-sm font-bold text-slate-500 mb-2 px-1">課ごとの練習 (Individual Lessons)</h3>
+                    <div class="grid grid-cols-2 gap-3 pb-4" id="lesson-grid">
+                        <!-- Lesson Buttons injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- 2. Question -->
+    <template id="tmpl-question">
+        <div class="w-full flex flex-col items-center h-full fade-in justify-start pt-4">
+            <div class="w-full bg-slate-100 rounded-full h-2 mb-4 flex-shrink-0">
+                <div id="progress-bar" class="bg-sky-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+
+            <div class="bg-white flex flex-col items-center mb-6 w-full relative flex-shrink-0">
+                <div class="emoji-img mb-2 filter drop-shadow-lg transform transition-transform hover:scale-110 cursor-default" id="q-image">🍎</div>
+                <div class="text-sm text-slate-500 font-mono border border-slate-200 rounded px-3 py-1 mb-2 bg-slate-50" id="q-hint">English Hint</div>
+                <h3 class="text-xl font-bold text-slate-800" id="q-text">これはなんですか？</h3>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 w-full overflow-y-auto pb-4 custom-scrollbar" id="options-container">
+                <!-- Injected via JS -->
+            </div>
+
+            <div class="mt-2 text-xs text-slate-400 text-center flex-shrink-0">
+                <span class="text-red-500 font-bold border-t-2 border-red-500 inline-block px-1">赤線</span> は音の高さを表しています
+            </div>
+
+            <div id="feedback-area" class="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center z-20 hidden rounded-2xl animate-fade-in p-4">
+                <div id="feedback-icon" class="text-6xl mb-4 filter drop-shadow-md">⭕</div>
+                <div id="feedback-text" class="text-3xl font-bold mb-2">せいかい！</div>
+                
+                <div class="text-slate-500 mb-1 text-sm">正解 (Answer):</div>
+                
+                <div class="bg-white px-8 py-6 rounded-xl border-2 border-sky-100 shadow-sm mb-6 flex flex-col items-center justify-center min-w-[200px]">
+                    <div id="feedback-correct-answer" class="text-3xl font-bold flex flex-row flex-wrap justify-center items-end gap-x-1 mb-2">
+                        <!-- HTML Accent -->
+                    </div>
+                    <div id="feedback-romaji" class="text-lg text-slate-500 font-bold romaji-font">
+                        <!-- Romaji -->
+                    </div>
+                </div>
+
+                <button onclick="quizApp.nextQuestion()" class="bg-slate-800 text-white text-lg font-bold py-3 px-12 rounded-full shadow-xl transition-transform hover:scale-105 active:scale-95 flex items-center">
+                    つぎへ <span class="ml-2">👉</span>
+                </button>
+            </div>
+        </div>
+    </template>
+
+    <!-- 3. Result -->
+    <template id="tmpl-result">
+        <div class="flex flex-col items-center justify-center w-full h-full text-center space-y-6 fade-in">
+            <div class="text-7xl animate-bounce">🎉</div>
+            <div>
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">おつかれさまでした！</h2>
+                <p class="text-slate-500">テストしゅうりょう (Finished)</p>
+            </div>
+            
+            <div class="bg-sky-50 rounded-2xl p-8 w-full max-w-xs border border-sky-100 shadow-inner">
+                <div class="text-sm text-sky-600 mb-1">スコア (Score)</div>
+                <div class="text-5xl font-bold text-sky-600 mb-3 tracking-tighter">
+                    <span id="score-num">0</span><span class="text-2xl text-sky-400 mx-2">/</span><span id="total-num">0</span>
+                </div>
+                <div id="score-message" class="text-base font-bold text-sky-700 bg-sky-100 py-1 px-3 rounded-full inline-block">Good Job!</div>
+            </div>
+
+            <!-- Retry Wrong Questions Button (Conditional) -->
+            <div id="retry-container" class="hidden w-full max-w-xs">
+                <button onclick="quizApp.retryWrong()" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform hover:scale-105 flex items-center justify-center mb-4">
+                    <span class="mr-2">🔄</span> 間違えた問題を復習する
+                </button>
+            </div>
+
+            <button onclick="quizApp.init()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform hover:scale-105 flex items-center">
+                <span class="mr-2">🏠</span> メニューにもどる
+            </button>
+        </div>
+    </template>
+
+    <script>
+        const vocabData = {
+            '1': [
+                { word: 'おはよう', reading: 'おはよう', romaji: 'Ohayou', accent: 3, english: 'Good morning', emoji: '☀️' },
+                { word: 'こんにちは', reading: 'こんにちは', romaji: 'Konnichiwa', accent: 0, english: 'Good afternoon', emoji: '👋' },
+                { word: 'こんばんは', reading: 'こんばんは', romaji: 'Konbanwa', accent: 0, english: 'Good evening', emoji: '🌙' },
+                { word: 'さようなら', reading: 'さようなら', romaji: 'Sayounara', accent: 5, english: 'Goodbye', emoji: '👋' },
+                { word: 'ありがとうございます', reading: 'ありがとうございます', romaji: 'Arigatou gozaimasu', accent: 2, english: 'Thank you', emoji: '🙏' },
+                { word: 'すみません', reading: 'すみません', romaji: 'Sumimasen', accent: 4, english: 'Excuse me / Sorry', emoji: '🙇' },
+                { word: 'はい', reading: 'はい', romaji: 'Hai', accent: 1, english: 'Yes', emoji: '⭕' },
+                { word: 'いいえ', reading: 'いいえ', romaji: 'Iie', accent: 3, english: 'No', emoji: '❌' },
+                { word: 'おさきに しつれいします', reading: 'おさきに しつれいします', romaji: 'Osakini shitsureeshimasu', accent: 0, english: 'I\'m leaving before you', emoji: '🚪' },
+                { word: 'おつかれさまでした', reading: 'おつかれさまでした', romaji: 'Otsukaresama deshita', accent: 0, english: 'Good work / Goodbye (to colleague)', emoji: '🍵' },
+                { word: 'おねがいします', reading: 'おねがいします', romaji: 'Onegaishimasu', accent: 6, english: 'Please', emoji: '🙏' },
+                { word: 'どういたしまして', reading: 'どういたしまして', romaji: 'Douitashimashite', accent: 0, english: 'You\'re welcome', emoji: '💁' }
+            ],
+            '2': [
+                { word: '0', reading: 'ゼロ', romaji: 'Zero', accent: 1, english: 'Zero', emoji: '0️⃣' },
+                { word: '1', reading: 'いち', romaji: 'Ichi', accent: 2, english: 'One', emoji: '1️⃣' },
+                { word: '2', reading: 'に', romaji: 'Ni', accent: 1, english: 'Two', emoji: '2️⃣' },
+                { word: '3', reading: 'さん', romaji: 'San', accent: 0, english: 'Three', emoji: '3️⃣' },
+                { word: '4', reading: 'よん', romaji: 'Yon', accent: 1, english: 'Four', emoji: '4️⃣' },
+                { word: '5', reading: 'ご', romaji: 'Go', accent: 1, english: 'Five', emoji: '5️⃣' },
+                { word: '6', reading: 'ろく', romaji: 'Roku', accent: 2, english: 'Six', emoji: '6️⃣' },
+                { word: '7', reading: 'なな', romaji: 'Nana', accent: 1, english: 'Seven', emoji: '7️⃣' },
+                { word: '8', reading: 'はち', romaji: 'Hachi', accent: 1, english: 'Eight', emoji: '8️⃣' },
+                { word: '9', reading: 'きゅう', romaji: 'Kyuu', accent: 1, english: 'Nine', emoji: '9️⃣' },
+                { word: '10', reading: 'じゅう', romaji: 'Juu', accent: 1, english: 'Ten', emoji: '🔟' },
+                { word: 'せんせい', reading: 'せんせい', romaji: 'Sensei', accent: 3, english: 'Teacher', emoji: '👩‍🏫' },
+                { word: 'がくせい', reading: 'がくせい', romaji: 'Gakusei', accent: 0, english: 'Student', emoji: '👨‍🎓' },
+                { word: 'ほん', reading: 'ほん', romaji: 'Hon', accent: 1, english: 'Book', emoji: '📕' },
+                { word: 'みて ください', reading: 'みて ください', romaji: 'Mite kudasai', accent: 1, english: 'Please look', emoji: '👀' },
+                { word: 'きいて ください', reading: 'きいて ください', romaji: 'Kiite kudasai', accent: 1, english: 'Please listen', emoji: '👂' },
+                { word: 'よんで ください', reading: 'よんで ください', romaji: 'Yonde kudasai', accent: 1, english: 'Please read', emoji: '📖' },
+                { word: 'かいて ください', reading: 'かいて ください', romaji: 'Kaite kudasai', accent: 1, english: 'Please write', emoji: '✍️' },
+                { word: 'いって ください', reading: 'いって ください', romaji: 'Itte kudasai', accent: 1, english: 'Please say it', emoji: '🗣️' },
+                { word: 'もういちど', reading: 'もういちど', romaji: 'Mou ichido', accent: 3, english: 'Once more', emoji: '🔁' },
+                { word: 'ゆっくり', reading: 'ゆっくり', romaji: 'Yukkuri', accent: 3, english: 'Slowly', emoji: '🐢' },
+                { word: 'わかりました', reading: 'わかりました', romaji: 'Wakarimashita', accent: 4, english: 'I understand', emoji: '💡' },
+                { word: 'わかりません', reading: 'わかりません', romaji: 'Wakarimasen', accent: 4, english: 'I don\'t understand', emoji: '❓' }
+            ],
+            '3': [
+                { word: 'わたし', reading: 'わたし', romaji: 'Watashi', accent: 0, english: 'I / Me', emoji: '🙋' },
+                { word: 'くに', reading: 'くに', romaji: 'Kuni', accent: 0, english: 'Country', emoji: '🌏' },
+                { word: 'なまえ', reading: 'なまえ', romaji: 'Namae', accent: 0, english: 'Name', emoji: '📛' },
+                { word: 'しごと', reading: 'しごと', romaji: 'Shigoto', accent: 0, english: 'Job / Work', emoji: '💼' },
+                { word: 'エンジニア', reading: 'エンジニア', romaji: 'Enjinia', accent: 3, english: 'Engineer', emoji: '👷' },
+                { word: 'かいしゃいん', reading: 'かいしゃいん', romaji: 'Kaishain', accent: 3, english: 'Company employee', emoji: '🏢' },
+                { word: 'がくせい', reading: 'がくせい', romaji: 'Gakusei', accent: 0, english: 'Student', emoji: '🎓' },
+                { word: '公務員', reading: 'こうむいん', romaji: 'Koumuin', accent: 3, english: 'Public servant', emoji: '🏛️' },
+                { word: '主婦', reading: 'しゅふ', romaji: 'Shufu', accent: 1, english: 'Homemaker', emoji: '🏠' },
+                { word: 'はじめまして', reading: 'はじめまして', romaji: 'Hajimemashite', accent: 4, english: 'Nice to meet you', emoji: '🤝' },
+                { word: 'どうぞ よろしく', reading: 'どうぞ よろしく', romaji: 'Douzo yoroshiku', accent: 1, english: 'Nice to meet you (closing)', emoji: '🙇' },
+                { word: 'こちらこそ', reading: 'こちらこそ', romaji: 'Kochirakoso', accent: 0, english: 'Nice to meet you too', emoji: '☺️' }
+            ],
+            '4': [
+                { word: 'かぞく', reading: 'かぞく', romaji: 'Kazoku', accent: 1, english: 'Family', emoji: '👨‍👩‍👧‍👦' },
+                { word: 'ちち', reading: 'ちち', romaji: 'Chichi', accent: 2, english: 'Father (my)', emoji: '👨' },
+                { word: 'はは', reading: 'はは', romaji: 'Haha', accent: 1, english: 'Mother (my)', emoji: '👩' },
+                { word: 'あに', reading: 'あに', romaji: 'Ani', accent: 1, english: 'Older brother (my)', emoji: '👦' },
+                { word: 'あね', reading: 'あね', romaji: 'Ane', accent: 0, english: 'Older sister (my)', emoji: '👧' },
+                { word: 'おとうと', reading: 'おとうと', romaji: 'Otouto', accent: 4, english: 'Younger brother (my)', emoji: '👶' },
+                { word: 'いもうと', reading: 'いもうと', romaji: 'Imouto', accent: 4, english: 'Younger sister (my)', emoji: '🧒' },
+                { word: 'おっと', reading: 'おっと', romaji: 'Otto', accent: 0, english: 'Husband (my)', emoji: '🤵' },
+                { word: 'つま', reading: 'つま', romaji: 'Tsuma', accent: 1, english: 'Wife (my)', emoji: '👰' },
+                { word: 'こども', reading: 'こども', romaji: 'Kodomo', accent: 0, english: 'Child', emoji: '🧒' },
+                { word: 'だれ', reading: 'だれ', romaji: 'Dare', accent: 1, english: 'Who', emoji: '👤' },
+                { word: 'ひとり', reading: 'ひとり', romaji: 'Hitori', accent: 2, english: 'One person (alone)', emoji: '👤' },
+                { word: 'ふたり', reading: 'ふたり', romaji: 'Futari', accent: 3, english: 'Two people', emoji: '👥' },
+                { word: 'なんにん', reading: 'なんにん', romaji: 'Nannin', accent: 1, english: 'How many people', emoji: '🔢' },
+                { word: 'さい', reading: 'さい', romaji: '-sai', accent: 1, english: '...years old', emoji: '🎂' },
+                { word: 'なんさい', reading: 'なんさい', romaji: 'Nansai', accent: 1, english: 'How old', emoji: '❓' },
+                { word: 'いっさい', reading: 'いっさい', romaji: 'Issai', accent: 1, english: '1 year old', emoji: '1️⃣🎂' },
+                { word: 'はっさい', reading: 'はっさい', romaji: 'Hassai', accent: 1, english: '8 years old', emoji: '8️⃣🎂' },
+                { word: 'じゅっさい', reading: 'じゅっさい', romaji: 'Jussai', accent: 1, english: '10 years old', emoji: '🔟🎂' },
+                { word: 'はたち', reading: 'はたち', romaji: 'Hatachi', accent: 1, english: '20 years old', emoji: '🎉' },
+                { word: 'ペット', reading: 'ペット', romaji: 'Petto', accent: 1, english: 'Pet', emoji: '🐕' }
+            ],
+            '5': [
+                { word: 'たべもの', reading: 'たべもの', romaji: 'Tabemono', accent: 2, english: 'Food', emoji: '🍱' },
+                { word: 'のみもの', reading: 'のみもの', romaji: 'Nomimono', accent: 2, english: 'Drink', emoji: '🍹' },
+                { word: 'にく', reading: 'にく', romaji: 'Niku', accent: 2, english: 'Meat', emoji: '🍖' },
+                { word: 'さかな', reading: 'さかな', romaji: 'Sakana', accent: 0, english: 'Fish', emoji: '🐟' },
+                { word: 'やさい', reading: 'やさい', romaji: 'Yasai', accent: 0, english: 'Vegetable', emoji: '🥦' },
+                { word: 'くだもの', reading: 'くだもの', romaji: 'Kudamono', accent: 2, english: 'Fruit', emoji: '🍎' },
+                { word: 'たまご', reading: 'たまご', romaji: 'Tamago', accent: 2, english: 'Egg', emoji: '🥚' },
+                { word: 'みず', reading: 'みず', romaji: 'Mizu', accent: 0, english: 'Water', emoji: '💧' },
+                { word: 'おちゃ', reading: 'おちゃ', romaji: 'Ocha', accent: 0, english: 'Tea', emoji: '🍵' },
+                { word: 'コーヒー', reading: 'コーヒー', romaji: 'Koohii', accent: 3, english: 'Coffee', emoji: '☕' },
+                { word: 'パン', reading: 'パン', romaji: 'Pan', accent: 1, english: 'Bread', emoji: '🍞' },
+                { word: 'あさごはん', reading: 'あさごはん', romaji: 'Asagohan', accent: 3, english: 'Breakfast', emoji: '🥣' },
+                { word: 'ひるごはん', reading: 'ひるごはん', romaji: 'Hirugohan', accent: 3, english: 'Lunch', emoji: '🍱' },
+                { word: 'ばんごはん', reading: 'ばんごはん', romaji: 'Bangohan', accent: 3, english: 'Dinner', emoji: '🍲' },
+                { word: 'すき', reading: 'すき', romaji: 'Suki', accent: 2, english: 'Like', emoji: '❤️' },
+                { word: 'きらい', reading: 'きらい', romaji: 'Kirai', accent: 0, english: 'Dislike', emoji: '💔' },
+                { word: 'おいしい', reading: 'おいしい', romaji: 'Oishii', accent: 3, english: 'Delicious', emoji: '😋' }
+            ],
+            '6': [
+                { word: 'メニュー', reading: 'メニュー', romaji: 'Menyuu', accent: 1, english: 'Menu', emoji: '📜' },
+                { word: 'ハンバーガー', reading: 'ハンバーガー', romaji: 'Hanbaagaa', accent: 3, english: 'Hamburger', emoji: '🍔' },
+                { word: 'チーズバーガー', reading: 'チーズバーガー', romaji: 'Chiizubaagaa', accent: 4, english: 'Cheeseburger', emoji: '🧀' },
+                { word: 'ドリンク', reading: 'ドリンク', romaji: 'Dorinku', accent: 0, english: 'Drink', emoji: '🥤' },
+                { word: 'ポテト', reading: 'ポテト', romaji: 'Poteto', accent: 0, english: 'French fries', emoji: '🍟' },
+                { word: 'コーラ', reading: 'コーラ', romaji: 'Koora', accent: 1, english: 'Cola', emoji: '🥤' },
+                { word: 'サイズ', reading: 'サイズ', romaji: 'Saizu', accent: 1, english: 'Size', emoji: '📏' },
+                { word: 'ひとつ', reading: 'ひとつ', romaji: 'Hitotsu', accent: 2, english: 'One (item)', emoji: '1️⃣' },
+                { word: 'ふたつ', reading: 'ふたつ', romaji: 'Futatsu', accent: 3, english: 'Two (items)', emoji: '2️⃣' },
+                { word: 'みっつ', reading: 'みっつ', romaji: 'Mittsu', accent: 3, english: 'Three (items)', emoji: '3️⃣' },
+                { word: 'よっつ', reading: 'よっつ', romaji: 'Yottsu', accent: 3, english: 'Four (items)', emoji: '4️⃣' },
+                { word: 'ください', reading: 'ください', romaji: 'Kudasai', accent: 3, english: 'Please give me', emoji: '🤲' },
+                { word: 'いざかや', reading: 'いざかや', romaji: 'Izakaya', accent: 0, english: 'Izakaya (Japanese pub)', emoji: '🏮' },
+                { word: 'えだまめ', reading: 'えだまめ', romaji: 'Edamame', accent: 0, english: 'Edamame', emoji: '🫛' },
+                { word: 'からあげ', reading: 'からあげ', romaji: 'Karaage', accent: 0, english: 'Fried chicken', emoji: '🍗' },
+                { word: '生ビール', reading: 'なまビール', romaji: 'Namabiiru', accent: 3, english: 'Draft beer', emoji: '🍺' }
+            ],
+            '7': [
+                { word: 'いえ', reading: 'いえ', romaji: 'Ie', accent: 2, english: 'House / Home', emoji: '🏠' },
+                { word: 'へや', reading: 'へや', romaji: 'Heya', accent: 2, english: 'Room', emoji: '🚪' },
+                { word: 'トイレ', reading: 'トイレ', romaji: 'Toire', accent: 1, english: 'Toilet', emoji: '🚽' },
+                { word: 'おふろ', reading: 'おふろ', romaji: 'Ofuro', accent: 2, english: 'Bath', emoji: '🛁' },
+                { word: 'だいどころ', reading: 'だいどころ', romaji: 'Daidokoro', accent: 0, english: 'Kitchen', emoji: '🍳' },
+                { word: 'エアコン', reading: 'エアコン', romaji: 'Eakon', accent: 0, english: 'Air conditioner', emoji: '❄️' },
+                { word: 'テレビ', reading: 'テレビ', romaji: 'Terebi', accent: 1, english: 'TV', emoji: '📺' },
+                { word: 'ベッド', reading: 'ベッド', romaji: 'Beddo', accent: 1, english: 'Bed', emoji: '🛏️' },
+                { word: 'いま', reading: 'いま', romaji: 'Ima', accent: 1, english: 'Living room', emoji: '🛋️' },
+                { word: 'Wi-Fi', reading: 'ワイファイ', romaji: 'Waifai', accent: 3, english: 'Wi-Fi', emoji: '📶' },
+                { word: 'パスワード', reading: 'パスワード', romaji: 'Pasuwaado', accent: 3, english: 'Password', emoji: '🔑' },
+                { word: 'どうぞ', reading: 'どうぞ', romaji: 'Douzo', accent: 1, english: 'Please (enter)', emoji: '💁' },
+                { word: 'おじゃまします', reading: 'おじゃまします', romaji: 'Ojamashimasu', accent: 6, english: 'Excuse me (entering)', emoji: '👟' }
+            ],
+            '8': [
+                { word: 'かいしゃ', reading: 'かいしゃ', romaji: 'Kaisha', accent: 0, english: 'Company', emoji: '🏢' },
+                { word: 'うけつけ', reading: 'うけつけ', romaji: 'Uketsuke', accent: 0, english: 'Reception', emoji: '💁' },
+                { word: 'じむしょ', reading: 'じむしょ', romaji: 'Jimusho', accent: 2, english: 'Office', emoji: '🖨️' },
+                { word: 'かいぎしつ', reading: 'かいぎしつ', romaji: 'Kaigishitsu', accent: 3, english: 'Meeting room', emoji: '🗣️' },
+                { word: 'しょくどう', reading: 'しょくどう', romaji: 'Shokudou', accent: 0, english: 'Cafeteria', emoji: '🍽️' },
+                { word: 'ロッカー', reading: 'ロッカー', romaji: 'Rokkaa', accent: 1, english: 'Locker', emoji: '🔒' },
+                { word: 'つくえ', reading: 'つくえ', romaji: 'Tsukue', accent: 0, english: 'Desk', emoji: '🖥️' },
+                { word: 'いす', reading: 'いす', romaji: 'Isu', accent: 0, english: 'Chair', emoji: '🪑' },
+                { word: 'どこ', reading: 'どこ', romaji: 'Doko', accent: 1, english: 'Where', emoji: '❓' },
+                { word: 'ここ', reading: 'ここ', romaji: 'Koko', accent: 0, english: 'Here', emoji: '👇' },
+                { word: 'そこ', reading: 'そこ', romaji: 'Soko', accent: 0, english: 'There', emoji: '👉' },
+                { word: 'あそこ', reading: 'あそこ', romaji: 'Asoko', accent: 0, english: 'Over there', emoji: '👉' }
+            ],
+            '9': [
+                { word: 'いま', reading: 'いま', romaji: 'Ima', accent: 1, english: 'Now', emoji: '⏱️' },
+                { word: 'じ', reading: 'じ', romaji: '-ji', accent: 1, english: '...o\'clock', emoji: '🕒' },
+                { word: 'はん', reading: 'はん', romaji: 'Han', accent: 1, english: 'Half (past)', emoji: '🌗' },
+                { word: 'おきます', reading: 'おきます', romaji: 'Okimasu', accent: 3, english: 'Wake up', emoji: '🥱' },
+                { word: 'ねます', reading: 'ねます', romaji: 'Nemasu', accent: 2, english: 'Sleep', emoji: '😴' },
+                { word: 'はたらきます', reading: 'はたらきます', romaji: 'Hatarakimasu', accent: 5, english: 'Work', emoji: '🛠️' },
+                { word: 'やすみます', reading: 'やすみます', romaji: 'Yasumimasu', accent: 4, english: 'Rest / Take a break', emoji: '☕' },
+                { word: 'べんきょうします', reading: 'べんきょうします', romaji: 'Benkyoushimasu', accent: 0, english: 'Study', emoji: '📚' },
+                { word: 'なんじ', reading: 'なんじ', romaji: 'Nanji', accent: 1, english: 'What time', emoji: '🕰️' },
+                { word: '〜から〜まで', reading: 'から まで', romaji: '...kara ...made', accent: 1, english: 'From ... to ...', emoji: '↔️' },
+                { word: 'ごぜん', reading: 'ごぜん', romaji: 'Gozen', accent: 1, english: 'AM', emoji: '☀️' },
+                { word: 'ごご', reading: 'ごご', romaji: 'Gogo', accent: 1, english: 'PM', emoji: '🌙' }
+            ],
+            '10': [
+                { word: 'ペン', reading: 'ペン', romaji: 'Pen', accent: 1, english: 'Pen', emoji: '🖊️' },
+                { word: 'ホッチキス', reading: 'ホッチキス', romaji: 'Hotchikisu', accent: 1, english: 'Stapler', emoji: '📎' },
+                { word: 'はさみ', reading: 'はさみ', romaji: 'Hasami', accent: 2, english: 'Scissors', emoji: '✂️' },
+                { word: 'のり', reading: 'のり', romaji: 'Nori', accent: 2, english: 'Glue', emoji: '🧴' },
+                { word: 'スマホ', reading: 'スマホ', romaji: 'Sumaho', accent: 0, english: 'Smartphone', emoji: '📱' },
+                { word: 'かします', reading: 'かします', romaji: 'Kashimasu', accent: 3, english: 'Lend', emoji: '🤲' },
+                { word: 'かります', reading: 'かります', romaji: 'Karimasu', accent: 3, english: 'Borrow', emoji: '🙏' },
+                { word: 'いいですか', reading: 'いいですか', romaji: 'Ii desuka', accent: 1, english: 'Is it okay?', emoji: '🆗' },
+                { word: 'どうぞ', reading: 'どうぞ', romaji: 'Douzo', accent: 1, english: 'Here you go / Go ahead', emoji: '💁' },
+                { word: 'ありがとうございます', reading: 'ありがとうございます', romaji: 'Arigatou gozaimasu', accent: 2, english: 'Thank you', emoji: '🙏' },
+                { word: 'あります', reading: 'あります', romaji: 'Arimasu', accent: 3, english: 'Have / Exist', emoji: '📦' }
+            ],
+            '11': [
+                { word: 'しゅみ', reading: 'しゅみ', romaji: 'Shumi', accent: 1, english: 'Hobby', emoji: '🎨' },
+                { word: 'スポーツ', reading: 'スポーツ', romaji: 'Supootsu', accent: 2, english: 'Sports', emoji: '🏅' },
+                { word: 'サッカー', reading: 'サッカー', romaji: 'Sakkaa', accent: 1, english: 'Soccer', emoji: '⚽' },
+                { word: 'ジョギング', reading: 'ジョギング', romaji: 'Jogingu', accent: 0, english: 'Jogging', emoji: '🏃' },
+                { word: 'アニメ', reading: 'アニメ', romaji: 'Anime', accent: 1, english: 'Anime', emoji: '📺' },
+                { word: 'マンガ', reading: 'マンガ', romaji: 'Manga', accent: 0, english: 'Manga', emoji: '📚' },
+                { word: 'えいが', reading: 'えいが', romaji: 'Eiga', accent: 1, english: 'Movie', emoji: '🎬' },
+                { word: 'おんがく', reading: 'おんがく', romaji: 'Ongaku', accent: 1, english: 'Music', emoji: '🎵' },
+                { word: 'りょうり', reading: 'りょうり', romaji: 'Ryouri', accent: 1, english: 'Cooking', emoji: '🍳' },
+                { word: 'どくしょ', reading: 'どくしょ', romaji: 'Dokusho', accent: 1, english: 'Reading', emoji: '📖' },
+                { word: 'どんな', reading: 'どんな', romaji: 'Donna', accent: 1, english: 'What kind of', emoji: '❓' }
+            ],
+            '12': [
+                { word: 'いっしょに', reading: 'いっしょに', romaji: 'Isshoni', accent: 0, english: 'Together', emoji: '👥' },
+                { word: 'ごはん', reading: 'ごはん', romaji: 'Gohan', accent: 1, english: 'Meal / Rice', emoji: '🍚' },
+                { word: 'たべませんか', reading: 'たべませんか', romaji: 'Tabemasenka', accent: 0, english: 'Won\'t you eat?', emoji: '🍽️' },
+                { word: 'いいですね', reading: 'いいですね', romaji: 'Ii desune', accent: 1, english: 'That sounds good', emoji: '👍' },
+                { word: 'いつ', reading: 'いつ', romaji: 'Itsu', accent: 1, english: 'When', emoji: '📅' },
+                { word: 'にちようび', reading: 'にちようび', romaji: 'Nichiyoubi', accent: 3, english: 'Sunday', emoji: '🔴' },
+                { word: 'どようび', reading: 'どようび', romaji: 'Doyoubi', accent: 2, english: 'Saturday', emoji: '🔵' },
+                { word: 'らいしゅう', reading: 'らいしゅう', romaji: 'Raishuu', accent: 0, english: 'Next week', emoji: '⏭️' },
+                { word: 'いきます', reading: 'いきます', romaji: 'Ikimasu', accent: 3, english: 'Go', emoji: '🚶' },
+                { word: 'みませんか', reading: 'みませんか', romaji: 'Mimasenka', accent: 0, english: 'Won\'t you watch?', emoji: '👀' },
+                { word: 'ざんねん', reading: 'ざんねん', romaji: 'Zannen', accent: 3, english: 'Regrettable / Sorry', emoji: '😢' },
+                { word: 'また こんど', reading: 'また こんど', romaji: 'Mata kondo', accent: 1, english: 'Another time', emoji: '👋' }
+            ],
+            '13': [
+                { word: 'えき', reading: 'えき', romaji: 'Eki', accent: 1, english: 'Station', emoji: '🚉' },
+                { word: 'バス', reading: 'バス', romaji: 'Basu', accent: 1, english: 'Bus', emoji: '🚌' },
+                { word: 'でんしゃ', reading: 'でんしゃ', romaji: 'Densha', accent: 0, english: 'Train', emoji: '🚃' },
+                { word: 'ちかてつ', reading: 'ちかてつ', romaji: 'Chikatetsu', accent: 0, english: 'Subway', emoji: '🚇' },
+                { word: 'じてんしゃ', reading: 'じてんしゃ', romaji: 'Jitensha', accent: 0, english: 'Bicycle', emoji: '🚲' },
+                { word: 'タクシー', reading: 'タクシー', romaji: 'Takushii', accent: 1, english: 'Taxi', emoji: '🚕' },
+                { word: 'あるいて', reading: 'あるいて', romaji: 'Aruite', accent: 2, english: 'On foot / Walking', emoji: '🚶' },
+                { word: 'なんぷん', reading: 'なんぷん', romaji: 'Nanpun', accent: 1, english: 'How many minutes', emoji: '⏱️' },
+                { word: 'くらい', reading: 'くらい', romaji: 'Kurai', accent: 0, english: 'About / Approximately', emoji: '≈' },
+                { word: 'どうやって', reading: 'どうやって', romaji: 'Douyatte', accent: 1, english: 'How (by what means)', emoji: '🗺️' }
+            ],
+            '14': [
+                { word: 'まち', reading: 'まち', romaji: 'Machi', accent: 2, english: 'Town / City', emoji: '🏙️' },
+                { word: 'レストラン', reading: 'レストラン', romaji: 'Resutoran', accent: 0, english: 'Restaurant', emoji: '🍴' },
+                { word: 'スーパー', reading: 'スーパー', romaji: 'Suupaa', accent: 1, english: 'Supermarket', emoji: '🛒' },
+                { word: 'コンビニ', reading: 'コンビニ', romaji: 'Konbini', accent: 0, english: 'Convenience store', emoji: '🏪' },
+                { word: 'びょういん', reading: 'びょういん', romaji: 'Byouin', accent: 0, english: 'Hospital', emoji: '🏥' },
+                { word: 'ゆうびんきょく', reading: 'ゆうびんきょく', romaji: 'Yuubinkyoku', accent: 3, english: 'Post office', emoji: '📮' },
+                { word: 'おおきい', reading: 'おおきい', romaji: 'Ookii', accent: 3, english: 'Big', emoji: '🐘' },
+                { word: 'ちいさい', reading: 'ちいさい', romaji: 'Chiisai', accent: 3, english: 'Small', emoji: '🐜' },
+                { word: 'ちかい', reading: 'ちかい', romaji: 'Chikai', accent: 2, english: 'Near', emoji: '🚶' },
+                { word: 'とおい', reading: 'とおい', romaji: 'Tooi', accent: 0, english: 'Far', emoji: '🔭' },
+                { word: 'べんり', reading: 'べんり', romaji: 'Benri', accent: 1, english: 'Convenient', emoji: '👍' },
+                { word: 'にぎやか', reading: 'にぎやか', romaji: 'Nigiyaka', accent: 2, english: 'Lively / Busy', emoji: '🎉' },
+                { word: 'しずか', reading: 'しずか', romaji: 'Shizuka', accent: 1, english: 'Quiet', emoji: '🤫' }
+            ],
+            '15': [
+                { word: 'シャツ', reading: 'シャツ', romaji: 'Shatsu', accent: 1, english: 'Shirt', emoji: '👔' },
+                { word: 'Tシャツ', reading: 'ティーシャツ', romaji: 'Tiishatsu', accent: 3, english: 'T-shirt', emoji: '👕' },
+                { word: 'コート', reading: 'コート', romaji: 'Kooto', accent: 1, english: 'Coat', emoji: '🧥' },
+                { word: 'くつ', reading: 'くつ', romaji: 'Kutsu', accent: 2, english: 'Shoes', emoji: '👞' },
+                { word: 'かばん', reading: 'かばん', romaji: 'Kaban', accent: 0, english: 'Bag', emoji: '👜' },
+                { word: 'ぼうし', reading: 'ぼうし', romaji: 'Boushi', accent: 0, english: 'Hat', emoji: '🧢' },
+                { word: 'これ', reading: 'これ', romaji: 'Kore', accent: 0, english: 'This one', emoji: '👇' },
+                { word: 'それ', reading: 'それ', romaji: 'Sore', accent: 0, english: 'That one', emoji: '👉' },
+                { word: 'あれ', reading: 'あれ', romaji: 'Are', accent: 0, english: 'That one over there', emoji: '👉' },
+                { word: 'いくら', reading: 'いくら', romaji: 'Ikura', accent: 1, english: 'How much', emoji: '💰' }
+            ],
+            '16': [
+                { word: 'えん', reading: 'えん', romaji: 'En', accent: 1, english: 'Yen', emoji: '💴' },
+                { word: 'ひゃく', reading: 'ひゃく', romaji: 'Hyaku', accent: 2, english: 'Hundred', emoji: '1️⃣0️⃣0️⃣' },
+                { word: 'せん', reading: 'せん', romaji: 'Sen', accent: 1, english: 'Thousand', emoji: '1️⃣K' },
+                { word: 'まん', reading: 'まん', romaji: 'Man', accent: 1, english: 'Ten thousand', emoji: '1️⃣0️⃣K' },
+                { word: 'かいもの', reading: 'かいもの', romaji: 'Kaimono', accent: 0, english: 'Shopping', emoji: '🛍️' },
+                { word: 'かいけい', reading: 'かいけい', romaji: 'Kaikei', accent: 0, english: 'Checkout / Bill', emoji: '🧾' },
+                { word: 'カード', reading: 'カード', romaji: 'Kaado', accent: 1, english: 'Card', emoji: '💳' },
+                { word: 'げんきん', reading: 'げんきん', romaji: 'Genkin', accent: 3, english: 'Cash', emoji: '💵' },
+                { word: 'レシート', reading: 'レシート', romaji: 'Reshiito', accent: 2, english: 'Receipt', emoji: '📃' },
+                { word: 'ふくろ', reading: 'ふくろ', romaji: 'Fukuro', accent: 3, english: 'Bag (plastic/shopping)', emoji: '🛍️' },
+                { word: 'いりません', reading: 'いりません', romaji: 'Irimasen', accent: 4, english: 'I don\'t need it', emoji: '👋' }
+            ],
+            '17': [
+                { word: 'しゅうまつ', reading: 'しゅうまつ', romaji: 'Shuumatsu', accent: 0, english: 'Weekend', emoji: '📅' },
+                { word: 'なにも', reading: 'なにも', romaji: 'Nanimo', accent: 1, english: 'Nothing', emoji: '🙅' },
+                { word: 'しませんでした', reading: 'しませんでした', romaji: 'Shimasen deshita', accent: 0, english: 'Did not do', emoji: '🛌' },
+                { word: 'そうじ', reading: 'そうじ', romaji: 'Souji', accent: 1, english: 'Cleaning', emoji: '🧹' },
+                { word: 'せんたく', reading: 'せんたく', romaji: 'Sentaku', accent: 0, english: 'Laundry', emoji: '🧺' },
+                { word: 'さんぽ', reading: 'さんぽ', romaji: 'Sanpo', accent: 0, english: 'Walk / Stroll', emoji: '🚶' },
+                { word: 'こうえん', reading: 'こうえん', romaji: 'Kouen', accent: 0, english: 'Park', emoji: '🌳' },
+                { word: 'どうでしたか', reading: 'どうでしたか', romaji: 'Dou deshitaka', accent: 1, english: 'How was it?', emoji: '🤔' },
+                { word: 'たのしかった', reading: 'たのしかった', romaji: 'Tanoshikatta', accent: 3, english: 'Was fun', emoji: '😄' },
+                { word: 'たいへん', reading: 'たいへん', romaji: 'Taihen', accent: 0, english: 'Tough / Hard', emoji: '😓' },
+                { word: 'ゆっくり', reading: 'ゆっくり', romaji: 'Yukkuri', accent: 3, english: 'Relaxing / Slowly', emoji: '🍵' }
+            ],
+            '18': [
+                { word: 'やすみ', reading: 'やすみ', romaji: 'Yasumi', accent: 3, english: 'Holiday / Break', emoji: '🏖️' },
+                { word: 'りょこう', reading: 'りょこう', romaji: 'Ryokou', accent: 0, english: 'Travel', emoji: '✈️' },
+                { word: 'おんせん', reading: 'おんせん', romaji: 'Onsen', accent: 0, english: 'Hot spring', emoji: '♨️' },
+                { word: 'おみやげ', reading: 'おみやげ', romaji: 'Omiyage', accent: 0, english: 'Souvenir', emoji: '🎁' },
+                { word: 'しゃしん', reading: 'しゃしん', romaji: 'Shashin', accent: 0, english: 'Photo', emoji: '📸' },
+                { word: 'とります', reading: 'とります', romaji: 'Torimasu', accent: 3, english: 'Take (a photo)', emoji: '🤳' },
+                { word: 'やま', reading: 'やま', romaji: 'Yama', accent: 2, english: 'Mountain', emoji: '⛰️' },
+                { word: 'かわ', reading: 'かわ', romaji: 'Kawa', accent: 2, english: 'River', emoji: '🏞️' },
+                { word: 'また', reading: 'また', romaji: 'Mata', accent: 0, english: 'Again', emoji: '🔄' },
+                { word: 'いきたい', reading: 'いきたい', romaji: 'Ikitai', accent: 3, english: 'Want to go', emoji: '🤩' }
+            ]
+        };
+
+        const quizApp = {
+            currentQuestions: [],
+            wrongQuestions: [],
+            currentIndex: 0,
+            score: 0,
+            availableVoices: [],
+            selectedVoiceIndex: 0,
+            speechRate: 0.8,
+            allWords: [], 
+
+            init() {
+                this.loadVoices();
+                if (speechSynthesis.onvoiceschanged !== undefined) {
+                    speechSynthesis.onvoiceschanged = this.loadVoices.bind(this);
+                }
+                
+                // Collect all words into a single pool for distractors
+                this.allWords = [];
+                Object.values(vocabData).forEach(lessonWords => {
+                    this.allWords.push(...lessonWords);
+                });
+
+                // Settings Listeners
+                document.getElementById('rate-range').addEventListener('input', (e) => {
+                    this.speechRate = parseFloat(e.target.value);
+                    document.getElementById('rate-val').textContent = this.speechRate;
+                });
+                document.getElementById('voice-select').addEventListener('change', (e) => {
+                    this.selectedVoiceIndex = parseInt(e.target.value);
+                });
+
+                this.renderMenu();
+            },
+
+            loadVoices() {
+                const voices = window.speechSynthesis.getVoices();
+                this.availableVoices = voices.filter(voice => voice.lang.includes('ja') || voice.lang.includes('JP'));
+                
+                this.availableVoices.sort((a, b) => {
+                    const isBetterA = a.name.includes('Google') || a.name.includes('Microsoft') || a.name.includes('Siri');
+                    const isBetterB = b.name.includes('Google') || b.name.includes('Microsoft') || b.name.includes('Siri');
+                    return isBetterB - isBetterA;
+                });
+
+                const select = document.getElementById('voice-select');
+                if (select) {
+                    select.innerHTML = '';
+                    if (this.availableVoices.length === 0) {
+                        const opt = document.createElement('option');
+                        opt.text = "日本語音声が見つかりません";
+                        select.add(opt);
+                    } else {
+                        this.availableVoices.forEach((voice, index) => {
+                            const opt = document.createElement('option');
+                            opt.value = index;
+                            opt.text = `${voice.name} (${voice.lang})`;
+                            select.add(opt);
+                        });
+                        select.value = this.selectedVoiceIndex;
+                    }
+                }
+            },
+
+            openSettings() {
+                this.loadVoices();
+                document.getElementById('settings-modal').classList.remove('hidden');
+            },
+
+            closeSettings() {
+                document.getElementById('settings-modal').classList.add('hidden');
+            },
+
+            testSpeech() {
+                this.speak('こんにちは。これはテストです。');
+            },
+
+            shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            },
+            
+            getDistractors(correctWord) {
+                const distractors = [];
+                const targetLength = correctWord.length;
+                
+                let candidatePool = this.allWords.filter(w => 
+                    w.reading !== correctWord && 
+                    Math.abs(w.reading.length - targetLength) <= 1
+                );
+                
+                if (candidatePool.length < 5) {
+                    candidatePool = this.allWords.filter(w => w.reading !== correctWord);
+                }
+
+                while(distractors.length < 3) {
+                    if (candidatePool.length === 0) break; 
+                    
+                    const randIndex = Math.floor(Math.random() * candidatePool.length);
+                    const r = candidatePool[randIndex].reading;
+                    
+                    if (!distractors.includes(r)) {
+                        distractors.push(r);
+                    }
+                    candidatePool.splice(randIndex, 1);
+                }
+                return distractors;
+            },
+
+            getMoras(text) {
+                return text.match(/[ァ-ヴーぁ-ん亜-熙][ァィゥェォャュョヮっ]?/g) || [text];
+            },
+
+            speak(text) {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'ja-JP';
+                    utterance.rate = this.speechRate;
+
+                    if (this.availableVoices.length > 0 && this.availableVoices[this.selectedVoiceIndex]) {
+                        utterance.voice = this.availableVoices[this.selectedVoiceIndex];
+                    }
+                    window.speechSynthesis.speak(utterance);
+                }
+            },
+
+            createAccentHTML(text, accentType) {
+                const moras = this.getMoras(text);
+                let html = '';
+                
+                moras.forEach((mora, index) => {
+                    const i = index + 1;
+                    let isHigh = false;
+                    let isDrop = false;
+
+                    if (accentType === 0) {
+                        if (i > 1) isHigh = true;
+                    } else if (accentType === 1) {
+                        if (i === 1) { isHigh = true; isDrop = true; }
+                    } else {
+                        if (i > 1 && i <= accentType) isHigh = true;
+                        if (i === accentType) isDrop = true;
+                    }
+
+                    let classes = 'mora text-2xl font-bold px-1 ';
+                    if (isHigh) classes += 'pitch-high ';
+                    else classes += 'pitch-low ';
+                    if (isDrop) classes += 'pitch-drop ';
+
+                    html += `<span class="${classes}">${mora}</span>`;
+                });
+                return html;
+            },
+
+            render(templateId) {
+                const content = document.getElementById('app-content');
+                const tmpl = document.getElementById(templateId);
+                content.innerHTML = '';
+                content.appendChild(tmpl.content.cloneNode(true));
+            },
+            
+            renderMenu() {
+                this.render('tmpl-menu');
+                const grid = document.getElementById('lesson-grid');
+                
+                for (let i = 1; i <= 18; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = "p-4 rounded-xl border-2 border-sky-100 bg-sky-50 hover:bg-sky-100 hover:border-sky-300 transition-all text-left flex items-center group shadow-sm";
+                    btn.onclick = () => this.startQuiz(i.toString());
+                    
+                    btn.innerHTML = `
+                        <span class="bg-sky-500 text-white rounded-full w-8 h-8 flex-shrink-0 flex items-center justify-center mr-3 font-bold group-hover:scale-110 transition-transform shadow-md">${i}</span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">第${i}課 (L${i})</div>
+                        </div>
+                    `;
+                    grid.appendChild(btn);
+                }
+            },
+
+            // Helper to get questions for a range
+            getQuestionsForRange(start, end) {
+                let questions = [];
+                for (let i = start; i <= end; i++) {
+                    if (vocabData[i.toString()]) {
+                        questions.push(...vocabData[i.toString()]);
+                    }
+                }
+                return questions;
+            },
+
+            startQuiz(lessonKey) {
+                let rawQuestions = [];
+                let isReview = false;
+
+                if (lessonKey === 'review-1-6') {
+                    rawQuestions = this.getQuestionsForRange(1, 6);
+                    isReview = true;
+                } else if (lessonKey === 'review-7-12') {
+                    rawQuestions = this.getQuestionsForRange(7, 12);
+                    isReview = true;
+                } else if (lessonKey === 'review-13-18') {
+                    rawQuestions = this.getQuestionsForRange(13, 18);
+                    isReview = true;
+                } else {
+                    rawQuestions = vocabData[lessonKey];
+                }
+
+                if (!rawQuestions || rawQuestions.length === 0) {
+                    alert("この課のデータはまだありません (Data not found)");
+                    return;
+                }
+                
+                // New Quiz: Reset wrong questions
+                this.wrongQuestions = [];
+                
+                // Shuffle raw questions first
+                this.shuffle(rawQuestions);
+
+                // If review mode, limit to 30 random questions to keep it manageable
+                if (isReview && rawQuestions.length > 30) {
+                    rawQuestions = rawQuestions.slice(0, 30);
+                }
+                
+                this.currentQuestions = rawQuestions.map(q => {
+                    const dists = this.getDistractors(q.reading);
+                    
+                    const options = this.shuffle([
+                        { text: q.reading, isCorrect: true, accent: q.accent, romaji: q.romaji },
+                        { text: dists[0], isCorrect: false },
+                        { text: dists[1], isCorrect: false },
+                        { text: dists[2], isCorrect: false }
+                    ]);
+                    return { ...q, options };
+                });
+                
+                this.currentIndex = 0;
+                this.score = 0;
+                this.renderQuestion();
+            },
+
+            retryWrong() {
+                if (this.wrongQuestions.length === 0) return;
+                
+                this.currentQuestions = this.wrongQuestions.map(q => {
+                     const dists = this.getDistractors(q.reading);
+                    const options = this.shuffle([
+                        { text: q.reading, isCorrect: true, accent: q.accent, romaji: q.romaji },
+                        { text: dists[0], isCorrect: false },
+                        { text: dists[1], isCorrect: false },
+                        { text: dists[2], isCorrect: false }
+                    ]);
+                    return { ...q, options };
+                });
+                
+                this.wrongQuestions = []; 
+                this.shuffle(this.currentQuestions);
+                this.currentIndex = 0;
+                this.score = 0;
+                this.renderQuestion();
+            },
+
+            renderQuestion() {
+                this.render('tmpl-question');
+                const q = this.currentQuestions[this.currentIndex];
+                const total = this.currentQuestions.length;
+                
+                const progressPct = ((this.currentIndex) / total) * 100;
+                document.getElementById('progress-bar').style.width = `${progressPct}%`;
+                
+                document.getElementById('q-image').textContent = q.emoji;
+                document.getElementById('q-hint').textContent = q.english;
+                
+                const optionsContainer = document.getElementById('options-container');
+                q.options.forEach(opt => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'flex items-center gap-2';
+
+                    const voiceBtn = document.createElement('button');
+                    voiceBtn.className = 'btn-play w-12 h-12 rounded-full bg-sky-100 text-sky-500 flex items-center justify-center flex-shrink-0 shadow-sm border border-sky-200';
+                    voiceBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>';
+                    voiceBtn.title = "声を聞く";
+                    voiceBtn.onclick = () => this.speak(opt.text);
+
+                    const answerBtn = document.createElement('button');
+                    answerBtn.className = 'btn-answer flex-1 bg-white border-2 border-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl text-lg transition-all shadow-sm';
+                    answerBtn.textContent = opt.text;
+                    answerBtn.onclick = () => this.checkAnswer(opt, q, answerBtn);
+                    
+                    wrapper.appendChild(voiceBtn);
+                    wrapper.appendChild(answerBtn);
+                    optionsContainer.appendChild(wrapper);
+                });
+            },
+
+            checkAnswer(selectedOpt, questionData, btnElement) {
+                const buttons = document.querySelectorAll('button');
+                buttons.forEach(b => b.disabled = true);
+
+                const feedbackArea = document.getElementById('feedback-area');
+                const feedbackIcon = document.getElementById('feedback-icon');
+                const feedbackText = document.getElementById('feedback-text');
+                const feedbackCorrect = document.getElementById('feedback-correct-answer');
+                const feedbackRomaji = document.getElementById('feedback-romaji');
+
+                const isCorrect = selectedOpt.text === questionData.reading;
+
+                if (isCorrect) {
+                    this.score++;
+                    btnElement.classList.add('correct-anim');
+                    feedbackIcon.textContent = '⭕';
+                    feedbackText.textContent = 'せいかい！';
+                    feedbackText.className = 'text-4xl font-bold mb-2 text-green-500';
+                } else {
+                    btnElement.classList.add('wrong-anim');
+                    feedbackIcon.textContent = '❌';
+                    feedbackText.textContent = 'ざんねん...';
+                    feedbackText.className = 'text-4xl font-bold mb-2 text-red-500';
+                    
+                    this.wrongQuestions.push(questionData);
+                }
+
+                feedbackCorrect.innerHTML = this.createAccentHTML(questionData.reading, questionData.accent);
+                feedbackRomaji.textContent = questionData.romaji;
+                feedbackArea.classList.remove('hidden');
+
+                setTimeout(() => {
+                    this.speak(questionData.reading);
+                }, 300);
+
+                feedbackArea.querySelector('button').disabled = false;
+            },
+
+            nextQuestion() {
+                this.currentIndex++;
+                if (this.currentIndex < this.currentQuestions.length) {
+                    this.renderQuestion();
+                } else {
+                    this.showResult();
+                }
+            },
+
+            showResult() {
+                this.render('tmpl-result');
+                const total = this.currentQuestions.length;
+                document.getElementById('score-num').textContent = this.score;
+                document.getElementById('total-num').textContent = total;
+                
+                const msg = document.getElementById('score-message');
+                const percentage = this.score / total;
+                
+                if (percentage === 1) {
+                    msg.textContent = 'パーフェクト！ (Perfect!)';
+                } else if (percentage >= 0.8) {
+                    msg.textContent = 'すごい！ (Great!)';
+                } else if (percentage >= 0.5) {
+                    msg.textContent = 'あとすこし！ (Good job!)';
+                } else {
+                    msg.textContent = 'もういちど がんばろう！ (Try again!)';
+                }
+                
+                if (this.wrongQuestions.length > 0) {
+                    document.getElementById('retry-container').classList.remove('hidden');
+                }
+            }
+        };
+
+        window.addEventListener('load', () => {
+            quizApp.init();
+        });
+    </script>
+</body>
+</html>
